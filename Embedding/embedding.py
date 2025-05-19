@@ -10,7 +10,7 @@ import pickle
 from danish_bert_embeddings import DanishBertEmbeddings
 
 def main(save_embeddings=True):
-    path = "data/diagnosis.csv"
+    path = "../data/diagnosis.csv"
     df = pd.read_csv(path, sep=';')
     
 
