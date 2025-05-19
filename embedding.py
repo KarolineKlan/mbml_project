@@ -31,15 +31,19 @@ def main(save_embeddings=True):
 
     for idx, row in df.iterrows():
         code = row[code_col]
-        text = row[text_col]
+        text1 = str(row["Aktionsdiagnosetekst"]) if pd.notnull(row["Aktionsdiagnosetekst"]) else ""
+        text2 = str(row["Gruppe 1"]) if pd.notnull(row["Gruppe 1"]) else ""
+        combined_text = text1 + " " + text2
+        embedding = embedder.embed(combined_text, output_numpy=True)
 
-        embedding = embedder.embed(text, output_numpy=True)
+
+
         code_embeddings[code] = embedding
 
-        embedding = embedder.embed(text, output_numpy=True)
+        
         embeddings.append(embedding)
 
-        if idx % 100 == 0:
+        if idx % 500 == 0:
             print(f"Processed {idx} rows.")
 
     embeddings = np.array(embeddings)
