@@ -53,8 +53,21 @@ def optimize_df(df):
 
     return df
 
+def preprocess_df(df):
+    # Remove duplicates based on 'Patientkontakt ID' and 'Kontakt varighed (timer)'
+    df = df.drop_duplicates(subset=["Patientkontakt ID","Kontakt varighed (timer)"],keep="first")
+
+    # Embed the diagnosis codes
+    with open("Embedding/diagnosis_code_embeddings.pkl", "rb") as f:
+        code_embeddings = pickle.load(f)
+    df["embedded"] = df["Aktionsdiagnosekode"].map(code_embeddings)
+
+    return df
+
+
 # Optimize DataFrame
 opt_df = optimize_df(df)
+opt_df = preprocess_df(opt_df)
 
 # Convert to PyArrow Table and save as Parquet
 table = pa.Table.from_pandas(opt_df)
