@@ -2,7 +2,8 @@ import pandas as pd
 import pyarrow as pa
 import pyarrow.parquet as pq
 from pyarrow import csv
-
+import pickle
+import numpy as np
 
 table = csv.read_csv("data/Case Rigshospitalet.csv")
 df = table.to_pandas()
@@ -55,20 +56,82 @@ def optimize_df(df):
 
 def preprocess_df(df):
     # Remove duplicates based on 'Patientkontakt ID' and 'Kontakt varighed (timer)'
-    df = df.drop_duplicates(subset=["Patientkontakt ID","Kontakt varighed (timer)"],keep="first")
+    df = df.drop_duplicates(subset=["Patientkontakt ID", "Kontakt varighed (timer)"], keep="first")
 
     # Embed the diagnosis codes
     with open("Embedding/diagnosis_code_embeddings.pkl", "rb") as f:
         code_embeddings = pickle.load(f)
+    
+    # Ensure the keys in code_embeddings are strings
+    code_embeddings = {str(k): tuple(v) for k, v in code_embeddings.items()}
+
     df["embedded"] = df["Aktionsdiagnosekode"].map(code_embeddings)
+
 
     return df
 
+def sum_preprocessed_df(df):
+    # Add a column for the number of unique "Aktionsdiagnosekode" per patient
+    df["UnikkeDiagnoser"] = df.groupby("Patient ID", observed=False)["Aktionsdiagnosekode"].transform("nunique")
 
-# Optimize DataFrame
-opt_df = optimize_df(df)
-opt_df = preprocess_df(opt_df)
+    # Group by 'Patient ID' and 'Aktionsdiagnosekode' and calculate the total time spent in the hospital
+    truncated_df = (
+        df.groupby(['Patient ID', 'Aktionsdiagnosekode'], observed=True)
+        .agg(
+            totalDiagnoseKontaktVarighed=('Kontakt varighed (timer)', 'sum'),
+            antalKontakter=('Patientkontakt ID', 'count'),
+            alder=('Patient alder på kontaktstart tidspunkt', 'mean'),
+            gender=('Patient køn', 'first'),
+            civilStand=('Patient civilstand', 'first'),
+            distanceToHospitalKM=('Distance to Hospital (km)', 'first'),
+            embedding=('embedded', 'first'),
+        ).reset_index()
+    )
+    
+    """# Add a column for the number of ambulant visits per patient per "Aktionsdiagnosekode"
+    ambulant_filter = df["Kontakttype"] == "Ambulant us/op"
+    df.loc[:, "AmbulantPerDiagnosis"] = (
+        df[ambulant_filter]
+        .groupby(["Patient ID", "Aktionsdiagnosekode"], observed=False)["Patientkontakt ID"]
+        .transform("count")
+    )
 
-# Convert to PyArrow Table and save as Parquet
-table = pa.Table.from_pandas(opt_df)
-pq.write_table(table, "data/CaseRigshospitalet_optimized.parquet")
+    # Fill NaN values in "AmbulantVisitsPerDiagnosis" with 0 for patients without ambulant visits
+    df.loc[:, "AmbulantVisitsPerDiagnosis"] = df["AmbulantVisitsPerDiagnosis"].fillna(0).astype(int)
+    """
+    
+    return truncated_df
+
+if __name__ == "__main__":
+    # Read CSV file
+    #table = csv.read_csv("data/Case Rigshospitalet.csv")
+    #df = table.to_pandas()
+
+    # Optimize DataFrame
+    #opt_df = optimize_df(df)
+    #df = pd.read_parquet("data/CaseRigshospitalet_optimized_withDistance.parquet")
+
+    #prepr_df = preprocess_df(df)
+
+    # Convert to PyArrow Table and save as Parquet
+    #table = pa.Table.from_pandas(prepr_df)
+    #pq.write_table(table, "data/CaseRigshospitalet_preprocessed.parquet")
+
+    df = pd.read_parquet("data/CaseRigshospitalet_preprocessed.parquet")
+    #print(df.head(5))
+    #exit()
+    # Check if dataframe patient ID is empty for some rows
+    print(df["Patient ID"].isnull().sum())
+
+    truncated_df = sum_preprocessed_df(df)
+
+    print("DataFrame shape:", df.shape)
+    print("Truncated DataFrame shape:", truncated_df.shape)
+    print(truncated_df.head(5))
+    print(truncated_df["Patient ID"].isnull().sum())
+
+
+    # Convert to PyArrow Table and save as Parquet  
+    table = pa.Table.from_pandas(truncated_df)
+    pq.write_table(table, "data/CaseRigshospitalet_summed.parquet")
+    print("Preprocessing complete.")
