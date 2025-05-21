@@ -58,6 +58,14 @@ def preprocess_df(df):
     # Remove duplicates based on 'Patientkontakt ID' and 'Kontakt varighed (timer)'
     df = df.drop_duplicates(subset=["Patientkontakt ID", "Kontakt varighed (timer)"], keep="first")
 
+    # Remove all Akut contacts
+    df = df[df['Indlæggelsesmåde'] != 'Akut']
+
+    # Group by Patient ID and count unique Aktionsdiagnosekode
+    unique_counts = df.groupby('Patient ID')['Aktionsdiagnosekode'].nunique()
+    # Map the counts back to the original DataFrame
+    df['UniqueCodeCount'] = df['Patient ID'].map(unique_counts)
+
     # Embed the diagnosis codes
     with open("Embedding/diagnosis_code_embeddings.pkl", "rb") as f:
         code_embeddings = pickle.load(f)
