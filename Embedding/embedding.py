@@ -10,7 +10,7 @@ import pickle
 from danish_bert_embeddings import DanishBertEmbeddings
 
 def main(save_embeddings=True):
-    path = "../data/diagnosis.csv"
+    path = "data/diagnosisTable.csv"
     df = pd.read_csv(path, sep=';')
     
 
@@ -18,10 +18,7 @@ def main(save_embeddings=True):
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print(f"Using device: {device}")
 
-
-    embedder = DanishBertEmbeddings()
-    embedder.model.to(device)  
-
+    embedder = DanishBertEmbeddings(device=device)
     
     text_col = "Aktionsdiagnosetekst"  
     code_col = "Aktionsdiagnosekode"
@@ -34,13 +31,10 @@ def main(save_embeddings=True):
         text1 = str(row["Aktionsdiagnosetekst"]) if pd.notnull(row["Aktionsdiagnosetekst"]) else ""
         text2 = str(row["Gruppe 1"]) if pd.notnull(row["Gruppe 1"]) else ""
         combined_text = text1 + " " + text2
-        embedding = embedder.embed(combined_text, output_numpy=True)
-
-
-
+        embedding = embedder.embed(combined_text, output_numpy=True, device=device)
+                
         code_embeddings[code] = embedding
 
-        
         embeddings.append(embedding)
 
         if idx % 500 == 0:
