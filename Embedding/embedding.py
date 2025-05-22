@@ -12,6 +12,7 @@ from danish_bert_embeddings import DanishBertEmbeddings
 def main(save_embeddings=True):
     path = "../data/diagnosis.csv"
     df = pd.read_csv(path, sep=';')
+    df = df.head(5)
     
 
     # Set device
@@ -35,6 +36,10 @@ def main(save_embeddings=True):
                 
         code_embeddings[code] = embedding
 
+        #Only works on Karos PC
+        #code_embeddings[code] = embedding.tolist()
+
+
         embeddings.append(embedding)
 
         if idx % 500 == 0:
@@ -42,12 +47,14 @@ def main(save_embeddings=True):
 
     embeddings = np.array(embeddings)
     
+    
     print(f"Generated embeddings for {len(code_embeddings)} unique codes.")
 
+
     if save_embeddings:
-        with open("diagnosis_code_embeddings.pkl", "wb") as f:
+        with open("../data/diagnosis_code_embeddings.pkl", "wb") as f:
             pickle.dump(code_embeddings, f)
-        print("Embeddings saved to 'diagnosis_code_embeddings.pkl'.")
+        print("Embeddings saved to 'data/diagnosis_code_embeddings.pkl'.")
 
 if __name__ == "__main__":
     main(save_embeddings=True)

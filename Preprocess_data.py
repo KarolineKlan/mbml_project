@@ -24,7 +24,7 @@ def preprocess_df(df):
     df["Patient civilstand"] = df["Patient civilstand"].apply(lambda x: x if x in valid_categories else "Andet")
 
     # Embed the diagnosis codes
-    with open("Embedding/diagnosis_code_embeddings.pkl", "rb") as f:
+    with open("data/diagnosis_code_embeddings.pkl", "rb") as f:
         code_embeddings = pickle.load(f)
     
     # Ensure the keys in code_embeddings are strings
