@@ -6,52 +6,6 @@ import pickle
 import numpy as np
 import os
 
-def optimize_df(df):
-    df['Kontakt startdato'] = pd.to_datetime(
-    df['Kontakt startdato'].str.replace(',', '.', regex=False), 
-    format="%Y-%m-%d %H:%M:%S.%f", 
-    errors='coerce'
-    )
-    df['Kontakt slutdato'] = pd.to_datetime(
-        df['Kontakt slutdato'].str.replace(',', '.', regex=False), 
-        format="%Y-%m-%d %H:%M:%S.%f", 
-        errors='coerce'
-    )
-    df['Procedure udført'] = pd.to_datetime(
-        df['Procedure udført'].str.replace(',', '.', regex=False), 
-        format="%Y-%m-%d %H:%M:%S.%f", 
-            errors='coerce'
-    )
-    
-    df['Patient ID'] = df['Patient ID'].astype('category')
-    df['Patient alder på kontaktstart tidspunkt'] = pd.to_numeric(df['Patient alder på kontaktstart tidspunkt'], errors='coerce').astype('Int16')
-    df['Kontakt startdato'] = pd.to_datetime(df['Kontakt startdato'], format='mixed')
-    df['Kontakt slutdato'] = pd.to_datetime(df['Kontakt slutdato'], format='mixed')
-    df['Kontakttype'] = df['Kontakttype'].astype('category')
-    df['Indlæggelsesmåde'] = df['Indlæggelsesmåde'].astype('category')
-    df['Patientkontakttype'] = df['Patientkontakttype'].astype('category')
-    df['Aktionsdiagnosekode'] = df['Aktionsdiagnosekode'].astype('category')
-    df['Bidiagnosekode'] = df['Bidiagnosekode'].astype('category')
-    df['Behandlingsansvarlig Afdeling'] = df['Behandlingsansvarlig Afdeling'].astype('category')
-    df['Procedure-kode'] = df['Procedure-kode'].astype('category')
-    df['Procedure-tillægskoder'] = df['Procedure-tillægskoder'].astype('category')
-    df['Procedure udført'] = pd.to_datetime(df['Procedure udført'], format='mixed')
-    
-    # Ensure conversion runs only if needed
-    if df['Kontakt varighed (timer)'].dtype == 'object':  
-        df['Kontakt varighed (timer)'] = df['Kontakt varighed (timer)'].str.replace(',', '.').astype('float32')
-
-    df['Besøgstype'] = df['Besøgstype'].astype('category')
-    df['Patient køn'] = df['Patient køn'].astype('category')
-    df['Patient civilstand'] = df['Patient civilstand'].astype('category')
-    df['Patient oprettet på Min SP (J/N)'] = df['Patient oprettet på Min SP (J/N)'].astype('category')
-    df['Patient land'] = df['Patient land'].astype('category')
-    df['Patient region'] = df['Patient region'].astype('category')
-    df['Patient postnummer'] = pd.to_numeric(df['Patient postnummer'], errors='coerce').astype('Int32')
-    df['Patient kommune'] = df['Patient kommune'].astype('category')
-
-    return df
-
 def preprocess_df(df):
     # Remove duplicates based on 'Patientkontakt ID' and 'Kontakt varighed (timer)'
     df = df.drop_duplicates(subset=["Patientkontakt ID", "Kontakt varighed (timer)"], keep="first")
@@ -113,36 +67,56 @@ def sum_preprocessed_df(df):
     
     return truncated_df
 
+def create_preprocessed_df(force=False):
+    if not os.path.exists("data/CaseRigshospitalet_preprocessed.parquet"):
+        if not os.path.exists("data/CaseRigshospitalet_optimized_withDistance.parquet"):
+            raise FileNotFoundError("The file 'CaseRigshospitalet_optimized_withDistance.parquet' does not exist in the 'data' directory.")
+        else:
+            df = pd.read_parquet("data/CaseRigshospitalet_optimized_withDistance.parquet")
+            prepr_df = preprocess_df(df)
+
+            # Convert to PyArrow Table and save as Parquet
+            table = pa.Table.from_pandas(prepr_df)
+            pq.write_table(table, "data/CaseRigshospitalet_preprocessed.parquet")
+            print("Preprocessing complete.")
+    else:
+        if force:
+            if not os.path.exists("data/CaseRigshospitalet_optimized_withDistance.parquet"):
+                raise FileNotFoundError("The file 'CaseRigshospitalet_optimized_withDistance.parquet' does not exist in the 'data' directory.")
+            else:
+                df = pd.read_parquet("data/CaseRigshospitalet_optimized_withDistance.parquet")
+                prepr_df = preprocess_df(df)
+
+                # Convert to PyArrow Table and save as Parquet
+                table = pa.Table.from_pandas(prepr_df)
+                pq.write_table(table, "data/CaseRigshospitalet_preprocessed.parquet")
+                print("Preprocessing complete.")
+        else:
+            print("Preprocessed DataFrame already exists. Use force=True to overwrite.")
+            return
+
+
+def create_summed_df(force=False):
+    if not os.path.exists("data/CaseRigshospitalet_summed.parquet"):
+        create_preprocessed_df(force=force)
+        df = pd.read_parquet("data/CaseRigshospitalet_preprocessed.parquet")
+        truncated_df = sum_preprocessed_df(df)
+        table = pa.Table.from_pandas(truncated_df)
+        pq.write_table(table, "data/CaseRigshospitalet_summed.parquet")
+        print("Summing and truncating dataset complete.")
+    else:
+        if force:
+            create_preprocessed_df(force=force)
+            df = pd.read_parquet("data/CaseRigshospitalet_preprocessed.parquet")
+            truncated_df = sum_preprocessed_df(df)
+            table = pa.Table.from_pandas(truncated_df)
+            pq.write_table(table, "data/CaseRigshospitalet_summed.parquet") 
+            print("Summing and truncating dataset complete.")
+        else:
+            print("Summed DataFrame already exists. Use force=True to overwrite.")
+            return
+
+
+
 if __name__ == "__main__":
-    # Read CSV file
-    #table = csv.read_csv("data/Case Rigshospitalet.csv")
-    #df = table.to_pandas()
-
-    # Optimize DataFrame
-    #opt_df = optimize_df(df)
-    #df = pd.read_parquet("data/CaseRigshospitalet_optimized_withDistance.parquet")
-
-    #prepr_df = preprocess_df(df)
-
-    # Convert to PyArrow Table and save as Parquet
-    #table = pa.Table.from_pandas(prepr_df)
-    #pq.write_table(table, "data/CaseRigshospitalet_preprocessed.parquet")
-
-    df = pd.read_parquet("data/CaseRigshospitalet_preprocessed.parquet")
-    #print(df.head(5))
-    #exit()
-    # Check if dataframe patient ID is empty for some rows
-    print(df["Patient ID"].isnull().sum())
-
-    truncated_df = sum_preprocessed_df(df)
-
-    print("DataFrame shape:", df.shape)
-    print("Truncated DataFrame shape:", truncated_df.shape)
-    print(truncated_df.head(5))
-    print(truncated_df["Patient ID"].isnull().sum())
-
-
-    # Convert to PyArrow Table and save as Parquet  
-    table = pa.Table.from_pandas(truncated_df)
-    pq.write_table(table, "data/CaseRigshospitalet_summed.parquet")
-    print("Preprocessing complete.")
+    create_summed_df(force=True)
