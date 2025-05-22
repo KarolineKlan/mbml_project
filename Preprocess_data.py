@@ -18,6 +18,11 @@ def preprocess_df(df):
     # Map the counts back to the original DataFrame
     df['UniqueCodeCount'] = df['Patient ID'].map(unique_counts)
 
+    # For the column "Patient civilstand" combine all that are not "Gift", "Fraskilt", "Ugift" into one category called "Andet"
+    valid_categories = ["Gift", "Fraskilt", "Ugift"]
+    df["Patient civilstand"] = df["Patient civilstand"].cat.add_categories("Andet")
+    df["Patient civilstand"] = df["Patient civilstand"].apply(lambda x: x if x in valid_categories else "Andet")
+
     # Embed the diagnosis codes
     with open("Embedding/diagnosis_code_embeddings.pkl", "rb") as f:
         code_embeddings = pickle.load(f)
@@ -35,9 +40,6 @@ def preprocess_df(df):
     return df
 
 def sum_preprocessed_df(df):
-    # Add a column for the number of unique "Aktionsdiagnosekode" per patient
-    df["UnikkeDiagnoser"] = df.groupby("Patient ID", observed=False)["Aktionsdiagnosekode"].transform("nunique")
-
     # Group by 'Patient ID' and 'Aktionsdiagnosekode' and calculate the total time spent in the hospital
     truncated_df = (
         df.groupby(['Patient ID', 'Aktionsdiagnosekode'], observed=True)
