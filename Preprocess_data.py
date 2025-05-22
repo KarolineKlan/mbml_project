@@ -12,6 +12,12 @@ def preprocess_df(df):
 
     # Remove all Akut contacts
     #df = df[df['Indlæggelsesmåde'] != 'Akut']
+    
+    # Remove rows with empty Patient ID (string)
+    df = df[df["Patient ID"] != ""]
+
+    # Remove rows with null distance
+    df = df.dropna(subset=['Distance to Hospital (km)'])
 
     # Group by Patient ID and count unique Aktionsdiagnosekode
     unique_counts = df.groupby('Patient ID')['Aktionsdiagnosekode'].nunique()
@@ -51,6 +57,7 @@ def sum_preprocessed_df(df):
             gender=('Patient køn', 'first'),
             civilStand=('Patient civilstand', 'first'),
             distanceToHospitalKM=('Distance to Hospital (km)', 'first'),
+            patientKommune = ('Patient kommune', 'first'),
             embedding=('embedded', 'first'),
         ).reset_index()
     )
