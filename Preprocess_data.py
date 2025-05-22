@@ -73,9 +73,13 @@ def preprocess_df(df):
     # Ensure the keys in code_embeddings are strings
     code_embeddings = {str(k): tuple(v) for k, v in code_embeddings.items()}
 
+    # Drop rows with NaN in 'Aktionsdiagnosekode'
+    df = df.dropna(subset=["Aktionsdiagnosekode"])
+
     df["embedded"] = df["Aktionsdiagnosekode"].map(code_embeddings)
 
-
+    df = df[df["embedded"].notnull()]
+    
     return df
 
 def sum_preprocessed_df(df):
@@ -88,6 +92,7 @@ def sum_preprocessed_df(df):
         .agg(
             totalDiagnoseKontaktVarighed=('Kontakt varighed (timer)', 'sum'),
             antalKontakter=('Patientkontakt ID', 'count'),
+            antalDiagnoser=('UniqueCodeCount', 'first'),
             alder=('Patient alder på kontaktstart tidspunkt', 'mean'),
             gender=('Patient køn', 'first'),
             civilStand=('Patient civilstand', 'first'),
@@ -117,15 +122,17 @@ if __name__ == "__main__":
 
     # Optimize DataFrame
     #opt_df = optimize_df(df)
-    #df = pd.read_parquet("data/CaseRigshospitalet_optimized_withDistance.parquet")
+    df = pd.read_parquet("data/CaseRigshospitalet_optimized_withDistance.parquet")
 
-    #prepr_df = preprocess_df(df)
+    prepr_df = preprocess_df(df)
 
     # Convert to PyArrow Table and save as Parquet
-    #table = pa.Table.from_pandas(prepr_df)
-    #pq.write_table(table, "data/CaseRigshospitalet_preprocessed.parquet")
+    table = pa.Table.from_pandas(prepr_df)
+    pq.write_table(table, "data/CaseRigshospitalet_preprocessed.parquet")
+    print("Embedding preprocessing complete.")
 
-    df = pd.read_parquet("data/CaseRigshospitalet_preprocessed.parquet")
+    df = prepr_df
+    #df = pd.read_parquet("data/CaseRigshospitalet_preprocessed.parquet")
     #print(df.head(5))
     #exit()
     # Check if dataframe patient ID is empty for some rows
