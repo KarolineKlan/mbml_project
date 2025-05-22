@@ -4,9 +4,7 @@ import pyarrow.parquet as pq
 from pyarrow import csv
 import pickle
 import numpy as np
-
-table = csv.read_csv("data/Case Rigshospitalet.csv")
-df = table.to_pandas()
+import os
 
 def optimize_df(df):
     df['Kontakt startdato'] = pd.to_datetime(
@@ -79,7 +77,7 @@ def preprocess_df(df):
     df["embedded"] = df["Aktionsdiagnosekode"].map(code_embeddings)
 
     df = df[df["embedded"].notnull()]
-    
+
     return df
 
 def sum_preprocessed_df(df):
@@ -115,38 +113,56 @@ def sum_preprocessed_df(df):
     
     return truncated_df
 
+def create_preprocessed_df(force=False):
+    if not os.path.exists("data/CaseRigshospitalet_preprocessed.parquet"):
+        if not os.path.exists("data/CaseRigshospitalet_optimized_withDistance.parquet"):
+            raise FileNotFoundError("The file 'CaseRigshospitalet_optimized_withDistance.parquet' does not exist in the 'data' directory.")
+        else:
+            df = pd.read_parquet("data/CaseRigshospitalet_optimized_withDistance.parquet")
+            prepr_df = preprocess_df(df)
+
+            # Convert to PyArrow Table and save as Parquet
+            table = pa.Table.from_pandas(prepr_df)
+            pq.write_table(table, "data/CaseRigshospitalet_preprocessed.parquet")
+            print("Preprocessing complete.")
+    else:
+        if force:
+            if not os.path.exists("data/CaseRigshospitalet_optimized_withDistance.parquet"):
+                raise FileNotFoundError("The file 'CaseRigshospitalet_optimized_withDistance.parquet' does not exist in the 'data' directory.")
+            else:
+                df = pd.read_parquet("data/CaseRigshospitalet_optimized_withDistance.parquet")
+                prepr_df = preprocess_df(df)
+
+                # Convert to PyArrow Table and save as Parquet
+                table = pa.Table.from_pandas(prepr_df)
+                pq.write_table(table, "data/CaseRigshospitalet_preprocessed.parquet")
+                print("Preprocessing complete.")
+        else:
+            print("Preprocessed DataFrame already exists. Use force=True to overwrite.")
+            return
+
+
+def create_summed_df(force=False):
+    if not os.path.exists("data/CaseRigshospitalet_summed.parquet"):
+        create_preprocessed_df(force=force)
+        df = pd.read_parquet("data/CaseRigshospitalet_preprocessed.parquet")
+        truncated_df = sum_preprocessed_df(df)
+        table = pa.Table.from_pandas(truncated_df)
+        pq.write_table(table, "data/CaseRigshospitalet_summed.parquet")
+        print("Summing and truncating dataset complete.")
+    else:
+        if force:
+            create_preprocessed_df(force=force)
+            df = pd.read_parquet("data/CaseRigshospitalet_preprocessed.parquet")
+            truncated_df = sum_preprocessed_df(df)
+            table = pa.Table.from_pandas(truncated_df)
+            pq.write_table(table, "data/CaseRigshospitalet_summed.parquet") 
+            print("Summing and truncating dataset complete.")
+        else:
+            print("Summed DataFrame already exists. Use force=True to overwrite.")
+            return
+
+
+
 if __name__ == "__main__":
-    # Read CSV file
-    #table = csv.read_csv("data/Case Rigshospitalet.csv")
-    #df = table.to_pandas()
-
-    # Optimize DataFrame
-    #opt_df = optimize_df(df)
-    df = pd.read_parquet("data/CaseRigshospitalet_optimized_withDistance.parquet")
-
-    prepr_df = preprocess_df(df)
-
-    # Convert to PyArrow Table and save as Parquet
-    table = pa.Table.from_pandas(prepr_df)
-    pq.write_table(table, "data/CaseRigshospitalet_preprocessed.parquet")
-    print("Embedding preprocessing complete.")
-
-    df = prepr_df
-    #df = pd.read_parquet("data/CaseRigshospitalet_preprocessed.parquet")
-    #print(df.head(5))
-    #exit()
-    # Check if dataframe patient ID is empty for some rows
-    print(df["Patient ID"].isnull().sum())
-
-    truncated_df = sum_preprocessed_df(df)
-
-    print("DataFrame shape:", df.shape)
-    print("Truncated DataFrame shape:", truncated_df.shape)
-    print(truncated_df.head(5))
-    print(truncated_df["Patient ID"].isnull().sum())
-
-
-    # Convert to PyArrow Table and save as Parquet  
-    table = pa.Table.from_pandas(truncated_df)
-    pq.write_table(table, "data/CaseRigshospitalet_summed.parquet")
-    print("Preprocessing complete.")
+    create_summed_df(force=True)
