@@ -8,11 +8,20 @@ import pyro.distributions as dist
 # d: [N, D_d] demographic features
 # time: [N] continuous outcome
 # visits: [N] count outcome
+
+torch.set_default_dtype(torch.float64)
+
 # Hyperparameters
 K = 3  # number of clusters
 
 # Model definition
 def MixtureModel(x, d, time, visits):
+    x = x.to(torch.float64)
+    d = d.to(torch.float64)
+    time = time.to(torch.float64)
+    visits = visits.to(torch.float64)
+
+
     N, D_x = x.shape
     _, D_d = d.shape
 
@@ -47,9 +56,9 @@ def MixtureModel(x, d, time, visits):
         bvx = beta_vis_x[z]
         bvd = beta_vis_d[z]
 
-        # Linear predictors
         mu_time = bt0 + (btx * x).sum(-1) + (btd * d).sum(-1)
         log_lambda = bv0 + (bvx * x).sum(-1) + (bvd * d).sum(-1)
+        log_lambda = torch.clamp(log_lambda, -10.0, 10.0)
 
         # Observations
         pyro.sample("obs_time", dist.Normal(mu_time, s_time), obs=time)
@@ -59,33 +68,37 @@ def MixtureModel(x, d, time, visits):
 def MixtureModelGuide(x,d, time=None, visits=None):
     N, D_x = x.shape
     _, D_d = d.shape
+    
     # Learnable Dirichlet concentration
-    q_alpha = pyro.param("q_alpha", torch.ones(K), constraint=dist.constraints.positive)
+    q_alpha = pyro.param("q_alpha", torch.ones(K,dtype=torch.float64), constraint=dist.constraints.positive)
     pyro.sample("pi", dist.Dirichlet(q_alpha))
 
     # Group params
-    for name, shape, constraint in [
-        ("beta_time0", [K], None),
-        ("sigma_time", [K], dist.constraints.positive),
-        ("beta_vis0", [K], None)
-    ]:
-        pyro.param(f"loc_{name}", torch.randn(*shape))
-        pyro.param(f"scale_{name}", torch.ones(*shape), constraint=dist.constraints.positive)
-        pyro.sample(name, dist.Normal(pyro.param(f"loc_{name}"), pyro.param(f"scale_{name}")))
+    with pyro.plate("group", K):
+        for name, shape, constraint in [
+            ("beta_time0", [K], None),
+            ("beta_vis0", [K], None)
+        ]:
+            pyro.param(f"loc_{name}", torch.zeros(*shape,dtype=torch.float64))
+            pyro.param(f"scale_{name}", torch.ones(*shape,dtype=torch.float64), constraint=dist.constraints.positive)
+            pyro.sample(name, dist.Normal(pyro.param(f"loc_{name}"), pyro.param(f"scale_{name}")))
 
-    # For weight vectors
-    pyro.param("loc_beta_time_x", torch.randn(K, D_x))
-    pyro.param("scale_beta_time_x", torch.ones(K, D_x), constraint=dist.constraints.positive)
-    pyro.sample("beta_time_x", dist.Normal(pyro.param("loc_beta_time_x"), pyro.param("scale_beta_time_x")).to_event(2))
+        #pyro.param("loc_sigma_time", torch.zeros(K))
+        pyro.param("scale_sigma_time", torch.ones(K, dtype=torch.float64), constraint=dist.constraints.positive)
+        pyro.sample("sigma_time", dist.HalfCauchy(pyro.param("scale_sigma_time")))
 
-    pyro.param("loc_beta_time_d", torch.randn(K, D_d))
-    pyro.param("scale_beta_time_d", torch.ones(K, D_d), constraint=dist.constraints.positive)
-    pyro.sample("beta_time_d", dist.Normal(pyro.param("loc_beta_time_d"), pyro.param("scale_beta_time_d")).to_event(2))
+        pyro.param("loc_beta_time_x", torch.zeros(K, D_x, dtype=torch.float64))
+        pyro.param("scale_beta_time_x", torch.ones(K, D_x, dtype=torch.float64), constraint=dist.constraints.positive)
+        pyro.sample("beta_time_x", dist.Normal(pyro.param("loc_beta_time_x"), pyro.param("scale_beta_time_x")).to_event(1))
 
-    pyro.param("loc_beta_vis_x", torch.randn(K, D_x))
-    pyro.param("scale_beta_vis_x", torch.ones(K, D_x), constraint=dist.constraints.positive)
-    pyro.sample("beta_vis_x", dist.Normal(pyro.param("loc_beta_vis_x"), pyro.param("scale_beta_vis_x")).to_event(2))
+        pyro.param("loc_beta_time_d", torch.zeros(K, D_d, dtype=torch.float64))
+        pyro.param("scale_beta_time_d", torch.ones(K, D_d, dtype=torch.float64), constraint=dist.constraints.positive)
+        pyro.sample("beta_time_d", dist.Normal(pyro.param("loc_beta_time_d"), pyro.param("scale_beta_time_d")).to_event(1))
 
-    pyro.param("loc_beta_vis_d", torch.randn(K, D_d))
-    pyro.param("scale_beta_vis_d", torch.ones(K, D_d), constraint=dist.constraints.positive)
-    pyro.sample("beta_vis_d", dist.Normal(pyro.param("loc_beta_vis_d"), pyro.param("scale_beta_vis_d")).to_event(2))
+        pyro.param("loc_beta_vis_x", torch.zeros(K, D_x,dtype=torch.float64))
+        pyro.param("scale_beta_vis_x", torch.ones(K, D_x,dtype=torch.float64), constraint=dist.constraints.positive)
+        pyro.sample("beta_vis_x", dist.Normal(pyro.param("loc_beta_vis_x"), pyro.param("scale_beta_vis_x")).to_event(1))
+
+        pyro.param("loc_beta_vis_d", torch.zeros(K, D_d,dtype=torch.float64))
+        pyro.param("scale_beta_vis_d", torch.ones(K, D_d,dtype=torch.float64), constraint=dist.constraints.positive)
+        pyro.sample("beta_vis_d", dist.Normal(pyro.param("loc_beta_vis_d"), pyro.param("scale_beta_vis_d")).to_event(1))
