@@ -52,19 +52,6 @@ def sum_preprocessed_df(df):
             embedding=('embedded', 'first'),
         ).reset_index()
     )
-    
-    """# Add a column for the number of ambulant visits per patient per "Aktionsdiagnosekode"
-    ambulant_filter = df["Kontakttype"] == "Ambulant us/op"
-    df.loc[:, "AmbulantPerDiagnosis"] = (
-        df[ambulant_filter]
-        .groupby(["Patient ID", "Aktionsdiagnosekode"], observed=False)["Patientkontakt ID"]
-        .transform("count")
-    )
-
-    # Fill NaN values in "AmbulantVisitsPerDiagnosis" with 0 for patients without ambulant visits
-    df.loc[:, "AmbulantVisitsPerDiagnosis"] = df["AmbulantVisitsPerDiagnosis"].fillna(0).astype(int)
-    """
-    
     return truncated_df
 
 def create_preprocessed_df(force=False):
@@ -91,9 +78,10 @@ def create_preprocessed_df(force=False):
                 table = pa.Table.from_pandas(prepr_df)
                 pq.write_table(table, "data/CaseRigshospitalet_preprocessed.parquet")
                 print("Preprocessing complete.")
+
         else:
             print("Preprocessed DataFrame already exists. Use force=True to overwrite.")
-            return
+    return
 
 
 def create_summed_df(force=False):
@@ -114,7 +102,7 @@ def create_summed_df(force=False):
             print("Summing and truncating dataset complete.")
         else:
             print("Summed DataFrame already exists. Use force=True to overwrite.")
-            return
+    return
 
 
 
