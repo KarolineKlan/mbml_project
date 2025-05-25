@@ -55,10 +55,21 @@ def split_patient_level(df, total_samples=100000):
     y_count = torch.from_numpy(df["antalKontakter"].values.astype(np.int16))
 
     # 2. Randomly select indices
-    all_indices = np.arange(len(embedding_tensor))
+    if total_samples:
+        if total_samples > len(df):
 
-    selected_indices = np.random.choice(all_indices, size=total_samples, replace=False)
-    df_subset = df.iloc[selected_indices]
+            print("total_samples cannot be greater than the number of rows in the DataFrame. Adjusting to the maximum available samples.")
+            total_samples = len(df)
+            selected_indices = np.arange(len(embedding_tensor))
+            df_subset = df.copu()
+        else:
+            all_indices = np.arange(len(embedding_tensor))
+
+            selected_indices = np.random.choice(all_indices, size=total_samples, replace=False)
+            df_subset = df.iloc[selected_indices]
+    else:
+        selected_indices = np.arange(len(embedding_tensor))
+        df_subset = df.copy()
 
     # Select based on patient ID, can't have same patient in train and test
     unique_patient_ids = df_subset['Patient ID'].unique()
