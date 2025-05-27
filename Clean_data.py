@@ -69,7 +69,7 @@ def create_preprocessed_df(force=False):
         if not os.path.exists("data/CaseRigshospitalet_optimized_withDistance.parquet"):
             raise FileNotFoundError("The file 'CaseRigshospitalet_optimized_withDistance.parquet' does not exist in the 'data' directory.")
         else:
-            df = pd.read_parquet("data/CaseRigshospitalet_optimized_withDistance.parquet")
+            df = pd.read_parquet("data/CaseRigshospitalet_optimized_withDistance.parquet", engine='fastparquet')
             prepr_df = preprocess_df(df)
 
             # Convert to PyArrow Table and save as Parquet
@@ -81,7 +81,7 @@ def create_preprocessed_df(force=False):
             if not os.path.exists("data/CaseRigshospitalet_optimized_withDistance.parquet"):
                 raise FileNotFoundError("The file 'CaseRigshospitalet_optimized_withDistance.parquet' does not exist in the 'data' directory.")
             else:
-                df = pd.read_parquet("data/CaseRigshospitalet_optimized_withDistance.parquet")
+                df = pd.read_parquet("data/CaseRigshospitalet_optimized_withDistance.parquet", engine='fastparquet')
                 prepr_df = preprocess_df(df)
 
                 # Convert to PyArrow Table and save as Parquet
@@ -97,7 +97,7 @@ def create_preprocessed_df(force=False):
 def create_summed_df(force=False):
     if not os.path.exists("data/CaseRigshospitalet_summed.parquet"):
         create_preprocessed_df(force=force)
-        df = pd.read_parquet("data/CaseRigshospitalet_preprocessed.parquet")
+        df = pd.read_parquet("data/CaseRigshospitalet_preprocessed.parquet", engine='fastparquet')
         truncated_df = sum_preprocessed_df(df)
         table = pa.Table.from_pandas(truncated_df)
         pq.write_table(table, "data/CaseRigshospitalet_summed.parquet")
@@ -105,7 +105,7 @@ def create_summed_df(force=False):
     else:
         if force:
             create_preprocessed_df(force=force)
-            df = pd.read_parquet("data/CaseRigshospitalet_preprocessed.parquet")
+            df = pd.read_parquet("data/CaseRigshospitalet_preprocessed.parquet", engine='fastparquet')
             truncated_df = sum_preprocessed_df(df)
             table = pa.Table.from_pandas(truncated_df)
             pq.write_table(table, "data/CaseRigshospitalet_summed.parquet") 
