@@ -1,0 +1,12 @@
+Training the Mixture model PGM
+# 9 minutes on GPU, 1000 samples, 10000 steps
+# 4 minutes on GPU, 100000 samples, 1000 steps
+# 22 minutes on GPU, 100000 samples, 10000 steps
+# 172 minutes on GPU, 100000 samples, 100000 steps
+# 87 minutes on GPU with mean VI (calculating for each group), 10 groups, 100000 samples, 2200 steps
+# After mean over z (10 groups) about a min per 10 epochs.
+# 27 min, batch size 2**12, 100000 samples, 1000 epochs, and decreasing loss!!!!
+# 82 min, batch size 2**10, 100000 samples, 1000 epochs, and decreasing loss!!!!
+# 180 min, batch size 2**11, all samples, 1173 epochs, and decreasing loss!!!!
+# 74 min, batch size 2**11, 100000 samples, 2000 epochs, pca and decreasing loss!!!!
+# 150 min, batch size 2**11, 100000 samples, 4000 epochs, pca
