@@ -41,7 +41,7 @@ def MixtureModel(x, d, v, c, G=10, device="cpu", batch_size=None):
         prior_mean_count = 1.3  # Adjust this based on your data
         gamma0 = pyro.sample("gamma0", dist.Normal(torch.tensor(math.log(prior_mean_count), device=device), torch.tensor(1., device=device)))
         gamma_x = pyro.sample("gamma_x", dist.Normal(torch.zeros(D_x, device=device), 0.1).to_event(1))
-        gamma_d = pyro.sample("gamma_d", dist.Normal(torch.zeros(D_d, device=device), 0.1.).to_event(1))
+        gamma_d = pyro.sample("gamma_d", dist.Normal(torch.zeros(D_d, device=device), 0.1).to_event(1))
 
     with pyro.plate("records", R, subsample_size=batch_size) as ind:
         x_b, d_b = x[ind], d[ind]
