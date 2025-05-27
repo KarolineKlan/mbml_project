@@ -1,5 +1,6 @@
 import pandas as pd
 import numpy as np
+import pyro
 import torch
 from sklearn.model_selection import train_test_split
 
@@ -91,3 +92,23 @@ def split_patient_level(df, total_samples=100000):
     v_time_test = y_time[selected_indices][test_mask.values]
     a_count_test = y_count[selected_indices][test_mask.values]
     return (x_emb_train, d_demo_train, v_time_train, a_count_train), (x_emb_test, d_demo_test, v_time_test, a_count_test)
+
+
+def save_model_and_losses(svi, losses, model_path="model_params.pt", losses_path="losses.npy"):
+    """
+    Save the model parameters and losses to files.
+
+    Args:
+        svi (pyro.infer.SVI): The SVI object containing the model parameters.
+        losses (list): List of losses recorded during training.
+        model_path (str): Path to save the model parameters.
+        losses_path (str): Path to save the losses.
+    """
+    # Save model parameters
+    pyro_params = {name: pyro.param(name).detach().cpu() for name in pyro.get_param_store().keys()}
+    torch.save(pyro_params, model_path)
+    print(f"Model parameters saved to {model_path}")
+
+    # Save losses
+    np.save(losses_path, np.array(losses))
+    print(f"Losses saved to {losses_path}")
