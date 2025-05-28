@@ -24,7 +24,7 @@ def reverse_standardize_tensor(tensor, mean, std):
     return tensor * std + mean
 
 
-def standardize_df(x_emb_train, x_emb_test, d_demo_train, d_demo_test):
+def standardize_input(x_emb_train, x_emb_test, d_demo_train, d_demo_test):
     # Standardize the tensors    
     x_emb_train, mean, std = standardize_tensor(x_emb_train)
     x_emb_test, _, _ = standardize_tensor(x_emb_test, mean, std)
