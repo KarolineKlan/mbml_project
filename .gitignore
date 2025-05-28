@@ -1,4 +1,7 @@
 data/*
 __pycache__/*
-Embeddings/__pycache__/*
-Embeddings/*.pkl
+Embedding/__pycache__/*
+Embedding/*.pkl
+figures/*
+outputs/*
+helper_functions/__pycache__/*
