@@ -31,7 +31,7 @@ def preprocess_df(df):
     df["Patient civilstand"] = df["Patient civilstand"].astype("category")
     
     # Embed the diagnosis codes
-    with open("data/diagnosis_code_embeddings.pkl", "rb") as f:
+    with open("../data/diagnosis_code_embeddings.pkl", "rb") as f:
         code_embeddings = pickle.load(f)
     
     # Ensure the keys in code_embeddings are strings
@@ -65,28 +65,28 @@ def sum_preprocessed_df(df):
     return truncated_df
 
 def create_preprocessed_df(force=False):
-    if not os.path.exists("data/CaseRigshospitalet_preprocessed.parquet"):
-        if not os.path.exists("data/CaseRigshospitalet_optimized_withDistance.parquet"):
+    if not os.path.exists("../data/CaseRigshospitalet_preprocessed.parquet"):
+        if not os.path.exists("../data/CaseRigshospitalet_optimized_withDistance.parquet"):
             raise FileNotFoundError("The file 'CaseRigshospitalet_optimized_withDistance.parquet' does not exist in the 'data' directory.")
         else:
-            df = pd.read_parquet("data/CaseRigshospitalet_optimized_withDistance.parquet", engine='fastparquet')
+            df = pd.read_parquet("../data/CaseRigshospitalet_optimized_withDistance.parquet", engine='fastparquet')
             prepr_df = preprocess_df(df)
 
             # Convert to PyArrow Table and save as Parquet
             table = pa.Table.from_pandas(prepr_df)
-            pq.write_table(table, "data/CaseRigshospitalet_preprocessed.parquet")
+            pq.write_table(table, "../data/CaseRigshospitalet_preprocessed.parquet")
             print("Preprocessing complete.")
     else:
         if force:
-            if not os.path.exists("data/CaseRigshospitalet_optimized_withDistance.parquet"):
+            if not os.path.exists("../data/CaseRigshospitalet_optimized_withDistance.parquet"):
                 raise FileNotFoundError("The file 'CaseRigshospitalet_optimized_withDistance.parquet' does not exist in the 'data' directory.")
             else:
-                df = pd.read_parquet("data/CaseRigshospitalet_optimized_withDistance.parquet", engine='fastparquet')
+                df = pd.read_parquet("../data/CaseRigshospitalet_optimized_withDistance.parquet", engine='fastparquet')
                 prepr_df = preprocess_df(df)
 
                 # Convert to PyArrow Table and save as Parquet
                 table = pa.Table.from_pandas(prepr_df)
-                pq.write_table(table, "data/CaseRigshospitalet_preprocessed.parquet")
+                pq.write_table(table, "../data/CaseRigshospitalet_preprocessed.parquet")
                 print("Preprocessing complete.")
 
         else:
@@ -95,20 +95,20 @@ def create_preprocessed_df(force=False):
 
 
 def create_summed_df(force=False):
-    if not os.path.exists("data/CaseRigshospitalet_summed.parquet"):
+    if not os.path.exists("../data/CaseRigshospitalet_summed.parquet"):
         create_preprocessed_df(force=force)
-        df = pd.read_parquet("data/CaseRigshospitalet_preprocessed.parquet", engine='fastparquet')
+        df = pd.read_parquet("../data/CaseRigshospitalet_preprocessed.parquet", engine='fastparquet')
         truncated_df = sum_preprocessed_df(df)
         table = pa.Table.from_pandas(truncated_df)
-        pq.write_table(table, "data/CaseRigshospitalet_summed.parquet")
+        pq.write_table(table, "../data/CaseRigshospitalet_summed.parquet")
         print("Summing and truncating dataset complete.")
     else:
         if force:
             create_preprocessed_df(force=force)
-            df = pd.read_parquet("data/CaseRigshospitalet_preprocessed.parquet", engine='fastparquet')
+            df = pd.read_parquet("../data/CaseRigshospitalet_preprocessed.parquet", engine='fastparquet')
             truncated_df = sum_preprocessed_df(df)
             table = pa.Table.from_pandas(truncated_df)
-            pq.write_table(table, "data/CaseRigshospitalet_summed.parquet") 
+            pq.write_table(table, "../data/CaseRigshospitalet_summed.parquet") 
             print("Summing and truncating dataset complete.")
         else:
             print("Summed DataFrame already exists. Use force=True to overwrite.")
