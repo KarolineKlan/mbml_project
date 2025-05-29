@@ -44,6 +44,7 @@ def make_demographic_features(df):
 def split_patient_level(df, total_samples=100000):
     # define a seed for reproducibility
     torch.manual_seed(42)
+    np.random.seed(42)
 
     # Convert list of lists to a 2D NumPy array
     embedding_length = len(df["embedding"].iloc[0])  # Assuming all embeddings should have the same length
